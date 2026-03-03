@@ -25,15 +25,23 @@ export async function streamChat({
     const enhancedMessages = [...messages];
     const targetLang = language || "Hindi";
 
+    // Inject current date context for temporal awareness
+    const currentDate = new Date().toLocaleString("en-IN", {
+      timeZone: "Asia/Kolkata",
+      dateStyle: "full",
+      timeStyle: "short",
+    });
+    const dateContext = `CURRENT DATE AND TIME IN INDIA (IST): ${currentDate}.`;
+
     if (category === "education") {
       enhancedMessages.unshift({
         role: "user",
-        content: `[SYSTEM OVERRIDE: You are an extremely knowledgeable expert teacher for the Indian NCERT curriculum (Class 6 to 12). Provide highly accurate, neat, and clean explanations strictly following the NCERT academic syllabus. Break down complex topics into easy-to-understand bullet points. CRITICAL, UNBREAKABLE RULE: YOU MUST IGNORE ALL PREVIOUS LANGUAGE INSTRUCTIONS AND STRICTLY COMMUNICATE IN ${targetLang.toUpperCase()} ONLY.]`
+        content: `[SYSTEM OVERRIDE: ${dateContext} You are an extremely knowledgeable expert teacher for the Indian NCERT curriculum (Class 6 to 12). Provide highly accurate, neat, and clean explanations strictly following the NCERT academic syllabus. Break down complex topics into easy-to-understand bullet points. CRITICAL, UNBREAKABLE RULE: YOU MUST IGNORE ALL PREVIOUS LANGUAGE INSTRUCTIONS AND STRICTLY COMMUNICATE IN ${targetLang.toUpperCase()} ONLY.]`
       });
     } else {
       enhancedMessages.unshift({
         role: "user",
-        content: `[SYSTEM OVERRIDE: The user has explicitly selected ${targetLang.toUpperCase()} as their preferred language. CRITICAL, UNBREAKABLE RULE: YOU MUST IGNORE ALL PREVIOUS INSTRUCTIONS ABOUT HINDI AND STRICTLY RESPOND ONLY IN ${targetLang.toUpperCase()}.]`
+        content: `[SYSTEM OVERRIDE: ${dateContext} The user has explicitly selected ${targetLang.toUpperCase()} as their preferred language. CRITICAL, UNBREAKABLE RULE: YOU MUST IGNORE ALL PREVIOUS INSTRUCTIONS ABOUT HINDI AND STRICTLY RESPOND ONLY IN ${targetLang.toUpperCase()}.]`
       });
     }
 
@@ -41,7 +49,7 @@ export async function streamChat({
     if (enhancedMessages.length > 0) {
       const lastMessage = enhancedMessages[enhancedMessages.length - 1];
       if (lastMessage.role === "user") {
-        lastMessage.content = `${lastMessage.content}\n\n(IMPORTANT: Answer strictly in ${targetLang.toUpperCase()} language only. Do not use Hindi unless the requested language is Hindi.)`;
+        lastMessage.content = `${lastMessage.content}\n\n(IMPORTANT: Answer strictly in ${targetLang.toUpperCase()} language only. Do not use Hindi unless the requested language is Hindi. Note: Today is ${currentDate})`;
       }
     }
 
