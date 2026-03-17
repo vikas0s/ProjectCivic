@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Send, Mic, MicOff, ArrowLeft, Loader2 } from "lucide-react";
+import { Send, Mic, MicOff, ArrowLeft, Loader2, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -131,6 +131,10 @@ export function ChatInterface({
   const [isListening, setIsListening] = useState(false);
   const [hasSentInitial, setHasSentInitial] = useState(false);
   const [isFetchingLocation, setIsFetchingLocation] = useState(false);
+  const [redirectSuggestion, setRedirectSuggestion] = useState<{
+    label: string;
+    categoryId: string;
+  } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
 
@@ -228,12 +232,23 @@ export function ChatInterface({
       });
     };
 
+    // Clear any previous redirect suggestion
+    setRedirectSuggestion(null);
+
     await streamChat({
       messages: [...messages, userMessage],
       category,
       language,
       onDelta: updateAssistant,
-      onDone: () => setIsLoading(false),
+      onDone: (guardRedirect) => {
+        setIsLoading(false);
+        if (guardRedirect) {
+          setRedirectSuggestion({
+            label: guardRedirect.suggestedCategoryLabel,
+            categoryId: guardRedirect.suggestedCategoryId,
+          });
+        }
+      },
       onError: (error) => {
         toast.error(error);
         setIsLoading(false);
@@ -415,6 +430,25 @@ export function ChatInterface({
             </div>
           </div>
         ))}
+
+        {/* Category redirect suggestion button */}
+        {redirectSuggestion && (
+          <div className="flex justify-start animate-fade-in">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onBack}
+              className="rounded-xl border-primary/30 text-primary hover:bg-primary/10 gap-2 mt-1"
+            >
+              <ArrowRight className="h-4 w-4" />
+              {language === "Hindi" || language === "Punjabi" || language === "Marathi" || language === "Gujarati" || language === "Bengali" || language === "Tamil" || language === "Telugu" || language === "Kannada" || language === "Malayalam"
+                ? `${redirectSuggestion.label} सेक्शन में जाएं`
+                : `Go to ${redirectSuggestion.label} Section`
+              }
+            </Button>
+          </div>
+        )}
+
         {isLoading && messages[messages.length - 1]?.role === "user" && (
           <div className="flex justify-start animate-fade-in">
             <div className="bg-card rounded-2xl rounded-bl-sm px-4 py-3 shadow-soft">

@@ -1,19 +1,21 @@
 import { useState } from "react";
-import { Mic, MessageSquare, Camera, Building2, Stethoscope, Wheat, GraduationCap, Shield, Wifi, Languages, Users, MessageCircle, CheckCircle, Globe } from "lucide-react";
+import { Mic, MessageSquare, Camera, Building2, Stethoscope, Wheat, GraduationCap, Shield, Wifi, Languages, Users, MessageCircle, CheckCircle, Globe, Briefcase } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CategoryCard } from "./CategoryCard";
 import { ChatInterface } from "./ChatInterface";
 import { ImageUpload } from "./ImageUpload";
 import { FAQSection } from "./FAQSection";
+import { GovtJobsBoard } from "./GovtJobsBoard";
 import { useLanguage } from "@/contexts/LanguageContext";
 
-type Category = "government" | "health" | "farming" | "education" | null;
+type Category = "government" | "health" | "farming" | "education" | "govt-jobs" | null;
 
 export function HomePage() {
   const { language } = useLanguage();
   const [activeCategory, setActiveCategory] = useState<Category>(null);
   const [showImageUpload, setShowImageUpload] = useState(false);
   const [showChat, setShowChat] = useState(false);
+  const [showGovtJobs, setShowGovtJobs] = useState(false);
   const [extractedText, setExtractedText] = useState("");
   const [initialQuestion, setInitialQuestion] = useState("");
 
@@ -274,11 +276,18 @@ export function HomePage() {
 
   const handleCategorySelect = (category: Category) => {
     setActiveCategory(category);
-    setShowChat(true);
+    if (category === "govt-jobs") {
+      setShowGovtJobs(true);
+      setShowChat(false);
+    } else {
+      setShowChat(true);
+      setShowGovtJobs(false);
+    }
   };
 
   const handleVoiceClick = () => {
     setShowChat(true);
+    setShowGovtJobs(false);
     setActiveCategory(null);
   };
 
@@ -298,6 +307,7 @@ export function HomePage() {
     setActiveCategory(category as Category);
     setInitialQuestion(question);
     setShowChat(true);
+    setShowGovtJobs(false);
   };
 
   const getCategoryInfo = (category: Category) => {
@@ -314,7 +324,7 @@ export function HomePage() {
     const info = getCategoryInfo(activeCategory);
     return (
       <ChatInterface
-        category={activeCategory || undefined}
+        category={activeCategory && activeCategory !== "govt-jobs" ? activeCategory : undefined}
         categoryTitle={info.title}
         categoryIcon={info.icon}
         onBack={() => {
@@ -324,6 +334,17 @@ export function HomePage() {
           setInitialQuestion("");
         }}
         initialMessage={extractedText || initialQuestion}
+      />
+    );
+  }
+
+  if (showGovtJobs) {
+    return (
+      <GovtJobsBoard 
+        onBack={() => {
+          setShowGovtJobs(false);
+          setActiveCategory(null);
+        }} 
       />
     );
   }
@@ -382,7 +403,7 @@ export function HomePage() {
         <h2 className="text-center text-lg font-medium text-muted-foreground mb-6">
           {t.chooseTopic}
         </h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-3xl mx-auto">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 max-w-5xl mx-auto">
           <CategoryCard
             icon={Building2}
             title={t.catGov}
@@ -418,6 +439,15 @@ export function HomePage() {
             bgClass="bg-blue-soft/10 dark:bg-blue-soft/20"
             onClick={() => handleCategorySelect("education")}
             delay={400}
+          />
+          <CategoryCard
+            icon={Briefcase}
+            title={language === "Hindi" ? "सरकारी नौकरी" : "Govt Jobs"}
+            description={language === "Hindi" ? "नई नौकरियों के अपडेट" : "Latest job updates"}
+            colorClass="text-orange-600"
+            bgClass="bg-orange-600/10 dark:bg-orange-600/20"
+            onClick={() => handleCategorySelect("govt-jobs")}
+            delay={500}
           />
         </div>
       </section>

@@ -35,13 +35,13 @@ serve(async (req) => {
     const targetLanguage = language || "Hindi";
     let contextPrompt = getSystemPrompt(targetLanguage);
 
-    // Add category-specific context
+    // Add category-specific context with STRICT enforcement
     if (category) {
       const categoryContext: Record<string, string> = {
-        government: `\n\nContext: The user is asking about government schemes. Provide key scheme details like eligibility, application process, and documents in ${targetLanguage}.`,
-        health: `\n\nContext: The user wants health information. Provide simple and understandable health advice in ${targetLanguage}.`,
-        farming: `\n\nContext: The user is asking about farming. Provide practical and weather-appropriate advice in ${targetLanguage}.`,
-        education: `\n\nContext: The user wants educational assistance. Explain in simple ${targetLanguage} language.`,
+        government: `\n\nSTRICT CATEGORY RULE: You are ONLY allowed to answer questions about government schemes, subsidies, policies, pensions, and welfare programs. If the user asks about farming, health, education, jobs, or any unrelated topic, you MUST REFUSE and say: "यह प्रश्न सरकारी योजनाओं से संबंधित नहीं है। कृपया संबंधित श्रेणी में जाएं।"\n\nContext: Provide key scheme details like eligibility, application process, and documents in ${targetLanguage}.`,
+        health: `\n\nSTRICT CATEGORY RULE: You are ONLY allowed to answer questions about health, medicine, symptoms, diseases, hygiene, nutrition, and first aid. If the user asks about farming, government schemes, education, jobs, or any unrelated topic, you MUST REFUSE and say: "यह प्रश्न स्वास्थ्य से संबंधित नहीं है। कृपया संबंधित श्रेणी में जाएं।"\n\nContext: Provide simple and understandable health advice in ${targetLanguage}.`,
+        farming: `\n\nSTRICT CATEGORY RULE: You are ONLY allowed to answer questions about farming, crops, fertilizers, irrigation, seeds, pests, soil, weather, and agriculture. If the user asks about health, government schemes, education, jobs, or any unrelated topic, you MUST REFUSE and say: "यह प्रश्न खेती-किसानी से संबंधित नहीं है। कृपया संबंधित श्रेणी में जाएं।"\n\nContext: Provide practical and weather-appropriate farming advice in ${targetLanguage}.`,
+        education: `\n\nSTRICT CATEGORY RULE: You are ONLY allowed to answer questions about education, NCERT syllabus, exams, subjects (math, science, history, etc.), school/college studies, and academic topics. If the user asks about farming, health, government schemes, jobs, or any unrelated topic, you MUST REFUSE and say: "यह प्रश्न शिक्षा से संबंधित नहीं है। कृपया संबंधित श्रेणी में जाएं।"\n\nContext: Explain in simple ${targetLanguage} language following NCERT syllabus.`,
       };
       contextPrompt += categoryContext[category] || "";
     }

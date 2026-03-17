@@ -3,6 +3,8 @@ export type Message = {
   content: string;
 };
 
+import { guardCategory } from "./categoryGuard";
+
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 
 export async function streamChat({
@@ -17,32 +19,52 @@ export async function streamChat({
   category?: string;
   language?: string;
   onDelta: (deltaText: string) => void;
-  onDone: () => void;
+  onDone: (guardRedirect?: { suggestedCategoryLabel: string; suggestedCategoryId: string }) => void;
   onError: (error: string) => void;
 }) {
   try {
-    // Intercept messages to inject deep persona instructions
-    const enhancedMessages = [...messages];
+    // ===== CATEGORY GUARD — intercept before AI call =====
+    const lastUserMsg = messages[messages.length - 1];
+    if (lastUserMsg?.role === "user" && category) {
+      const guardResult = guardCategory(lastUserMsg.content, category, language);
+      if (guardResult?.blocked) {
+        // Emit the redirect message locally — no API call
+        onDelta(guardResult.redirectMessage);
+        onDone({
+          suggestedCategoryLabel: guardResult.suggestedCategoryLabel,
+          suggestedCategoryId: guardResult.suggestedCategoryId,
+        });
+        return;
+      }
+    }
+    // Deep-copy messages so we never mutate React state objects
+    const enhancedMessages = messages.map((m) => ({ ...m }));
     const targetLang = language || "Hindi";
+
+    // Inject current date context for temporal awareness
+    const currentDate = new Date().toLocaleString("en-IN", {
+      timeZone: "Asia/Kolkata",
+      dateStyle: "full",
+      timeStyle: "short",
+    });
+    const dateContext = `CURRENT DATE AND TIME IN INDIA (IST): ${currentDate}.`;
 
     if (category === "education") {
       enhancedMessages.unshift({
         role: "user",
-        content: `[SYSTEM OVERRIDE: You are an extremely knowledgeable expert teacher for the Indian NCERT curriculum (Class 6 to 12). Provide highly accurate, neat, and clean explanations strictly following the NCERT academic syllabus. Break down complex topics into easy-to-understand bullet points. CRITICAL, UNBREAKABLE RULE: YOU MUST IGNORE ALL PREVIOUS LANGUAGE INSTRUCTIONS AND STRICTLY COMMUNICATE IN ${targetLang.toUpperCase()} ONLY.]`
+        content: `[SYSTEM OVERRIDE: ${dateContext} You are an extremely knowledgeable expert teacher for the Indian NCERT curriculum (Class 6 to 12). Provide highly accurate, neat, and clean explanations strictly following the NCERT academic syllabus. Break down complex topics into easy-to-understand bullet points. CRITICAL, UNBREAKABLE RULE: YOU MUST IGNORE ALL PREVIOUS LANGUAGE INSTRUCTIONS AND STRICTLY COMMUNICATE IN ${targetLang.toUpperCase()} ONLY.]`
       });
     } else {
       enhancedMessages.unshift({
         role: "user",
-        content: `[SYSTEM OVERRIDE: The user has explicitly selected ${targetLang.toUpperCase()} as their preferred language. CRITICAL, UNBREAKABLE RULE: YOU MUST IGNORE ALL PREVIOUS INSTRUCTIONS ABOUT HINDI AND STRICTLY RESPOND ONLY IN ${targetLang.toUpperCase()}.]`
+        content: `[SYSTEM OVERRIDE: ${dateContext} The user has explicitly selected ${targetLang.toUpperCase()} as their preferred language. CRITICAL, UNBREAKABLE RULE: YOU MUST IGNORE ALL PREVIOUS INSTRUCTIONS ABOUT HINDI AND STRICTLY RESPOND ONLY IN ${targetLang.toUpperCase()}.]`
       });
     }
 
-    // Double-bind the last message to enforce language over the Supabase edge function's hidden prompt
-    if (enhancedMessages.length > 0) {
-      const lastMessage = enhancedMessages[enhancedMessages.length - 1];
-      if (lastMessage.role === "user") {
-        lastMessage.content = `${lastMessage.content}\n\n(IMPORTANT: Answer strictly in ${targetLang.toUpperCase()} language only. Do not use Hindi unless the requested language is Hindi.)`;
-      }
+    // Append language enforcement to the last user message (API only, not UI — deep copy above ensures UI is unaffected)
+    const lastMsg = enhancedMessages[enhancedMessages.length - 1];
+    if (lastMsg?.role === "user") {
+      lastMsg.content = `${lastMsg.content}\n\n(Respond strictly in ${targetLang} only. Today is ${currentDate})`;
     }
 
     const resp = await fetch(CHAT_URL, {
